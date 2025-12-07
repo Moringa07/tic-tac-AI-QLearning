@@ -37,18 +37,24 @@ def minimax_bruteforce(board: Board, depth: int, is_maximizing: bool) -> int:
         return best_score
 
 
-def find_best_move_bruteforce(board: Board) -> Tuple[int, int]:
+def find_best_move_bruteforce(board: Board) -> Tuple[Tuple[int, int], List[dict]]:
     """Punto de entrada para la IA de fuerza bruta."""
     best_score = -math.inf
     best_move = board.get_available_moves()[0]
+    
+    graph_data = []
+
     for move in board.get_available_moves():
         temp_board = deepcopy(board)
         temp_board.make_move(move[0], move[1])
         score = minimax_bruteforce(temp_board, 0, False)
+        
+        graph_data.append({'move': move, 'score': score, 'board': temp_board.board.tolist()})
+
         if score > best_score:
             best_score = score
             best_move = move
-    return best_move
+    return best_move, graph_data
 
 
 def minimax_alpha_beta(
@@ -86,15 +92,24 @@ def minimax_alpha_beta(
         return best_score
 
 
-def find_best_move_alpha_beta(board: Board) -> Tuple[int, int]:
-    """Punto de entrada para la IA optimizada."""
+def find_best_move_alpha_beta(board: Board) -> Tuple[Tuple[int, int], List[dict]]:
+    """Punto de entrada para la IA optimizada. Retorna (mejor_movimiento, datos_grafo)."""
     best_score = -math.inf
     best_move = board.get_available_moves()[0]
+    
+    # Lista para guardar los datos del primer nivel del árbol
+    # Formato: {'move': (row, col), 'score': int}
+    graph_data = []
+
     for move in board.get_available_moves():
         temp_board = deepcopy(board)
         temp_board.make_move(move[0], move[1])
         score = minimax_alpha_beta(temp_board, 0, -math.inf, math.inf, False)
+        
+        graph_data.append({'move': move, 'score': score, 'board': temp_board.board.tolist()})
+
         if score > best_score:
             best_score = score
             best_move = move
-    return best_move
+            
+    return best_move, graph_data
