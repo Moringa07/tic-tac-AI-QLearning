@@ -12,19 +12,24 @@ class Renderer:
         self.font: pygame.font.Font = pygame.font.Font(None, 45)
         self.menu_font: pygame.font.Font = pygame.font.Font(None, MENU_FONT_SIZE)
 
-        # Dynamic Offsets (Start with default left-aligned)
+        # Offsets Dinámicos 
         self.board_offset_x = BOARD_OFFSET_X
         self.board_offset_y = BOARD_OFFSET_Y
+        
+        self.inverted_symbols = False
+    
+    def set_inverted(self, inverted: bool):
+        """Si es True, Jugador 1 dibuja O (Círculo) y Jugador 2 dibuja X (Cruz)."""
+        self.inverted_symbols = inverted
 
     def set_centered(self, is_centered: bool):
-        """Toggle between centered board (for H vs H) and left-aligned."""
+        """Alternar entre tablero centrado (H vs H) y alineado a la izquierda."""
         if is_centered:
             self.board_offset_x = (WIDTH - BOARD_WIDTH) // 2
         else:
             self.board_offset_x = BOARD_OFFSET_X
 
     def draw_menu(self, options: List[str], selected_option: int) -> List[pygame.Rect]:
-        """Dibuja el menú y retorna los rectángulos de las opciones para detección de clic."""
         self.screen.fill(BG_COLOR)
 
         option_rects = []
@@ -49,16 +54,14 @@ class Renderer:
                 color = MENU_SELECTED_COLOR
                 text_content = f">  {option}  <"
             else:
-                color = (180, 180, 180)  # Gris claro
+                color = (180, 180, 180)  
                 text_content = option
 
             text = self.font.render(text_content, True, color)
             rect = text.get_rect(center=(center_x, center_y))
 
-            # Dibujar fondo si está seleccionado
             if i == selected_option:
                 bg_rect = rect.inflate(40, 15)
-                # Efecto visual: borde redondeado y color de fondo sutil
                 pygame.draw.rect(self.screen, (68, 71, 90), bg_rect, border_radius=15)
                 pygame.draw.rect(
                     self.screen, MENU_SELECTED_COLOR, bg_rect, 2, border_radius=15
@@ -74,16 +77,19 @@ class Renderer:
 
     def draw_turn_indicator(self, turn: int, player_type: str):
         """Dibuja quién está jugando en la parte superior."""
+        
+        is_x = (turn == 1 and not self.inverted_symbols) or (turn == 2 and self.inverted_symbols)
+        symbol_str = "X" if is_x else "O"
+        
+        # Color based on symbol
+        color_rgb = CROSS_COLOR if is_x else CIRCLE_COLOR
+        
         if player_type == "HUMAN":
-            text_str = f"Turno del Humano ({'X' if turn == 1 else 'O'})"
-            color = (139, 233, 253)  # Cyan
+            text_str = f"Turno del Humano ({symbol_str})"
         else:
-            text_str = f"Turno de la IA ({'X' if turn == 1 else 'O'})"
-            color = (255, 121, 198)  # Pink
-
-        text = self.font.render(text_str, True, color)
-        # Centrar en el área superior (encima del tablero)
-        # Usamos self.board_offset_x para centrarlo respecto a la tabla visualmente
+            text_str = f"Turno de la IA ({symbol_str})"
+        
+        text = self.font.render(text_str, True, color_rgb)
         center_x = self.board_offset_x + BOARD_WIDTH // 2
         text_rect = text.get_rect(center=(center_x, BOARD_OFFSET_Y // 2))
         self.screen.blit(text, text_rect)
@@ -96,24 +102,39 @@ class Renderer:
         # Crear superficie temporal con transparencia
         ghost_surf = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
 
-        alpha = 100  # Transparencia (0-255)
+        alpha = 100 
 
-        if turn == 1:  # X
-            margin = SQUARE_SIZE // 4
-            color = (*CROSS_COLOR, alpha)
-            start_desc = (margin, margin)
-            end_desc = (SQUARE_SIZE - margin, SQUARE_SIZE - margin)
-            start_asc = (margin, SQUARE_SIZE - margin)
-            end_asc = (SQUARE_SIZE - margin, margin)
+        if turn == 1:  
+            if self.inverted_symbols:
+                color = (*CIRCLE_COLOR, alpha)
+                radius = CIRCLE_RADIUS
+                center = (SQUARE_SIZE // 2, SQUARE_SIZE // 2)
+                pygame.draw.circle(ghost_surf, color, center, radius, CIRCLE_WIDTH)
+            else:
+                margin = SQUARE_SIZE // 4
+                color = (*CROSS_COLOR, alpha)
+                start_desc = (margin, margin)
+                end_desc = (SQUARE_SIZE - margin, SQUARE_SIZE - margin)
+                start_asc = (margin, SQUARE_SIZE - margin)
+                end_asc = (SQUARE_SIZE - margin, margin)
+                pygame.draw.line(ghost_surf, color, start_desc, end_desc, CROSS_WIDTH)
+                pygame.draw.line(ghost_surf, color, start_asc, end_asc, CROSS_WIDTH)
 
-            pygame.draw.line(ghost_surf, color, start_desc, end_desc, CROSS_WIDTH)
-            pygame.draw.line(ghost_surf, color, start_asc, end_asc, CROSS_WIDTH)
-
-        else:  # O
-            color = (*CIRCLE_COLOR, alpha)
-            radius = CIRCLE_RADIUS
-            center = (SQUARE_SIZE // 2, SQUARE_SIZE // 2)
-            pygame.draw.circle(ghost_surf, color, center, radius, CIRCLE_WIDTH)
+        else:
+            if self.inverted_symbols:
+                margin = SQUARE_SIZE // 4
+                color = (*CROSS_COLOR, alpha)
+                start_desc = (margin, margin)
+                end_desc = (SQUARE_SIZE - margin, SQUARE_SIZE - margin)
+                start_asc = (margin, SQUARE_SIZE - margin)
+                end_asc = (SQUARE_SIZE - margin, margin)
+                pygame.draw.line(ghost_surf, color, start_desc, end_desc, CROSS_WIDTH)
+                pygame.draw.line(ghost_surf, color, start_asc, end_asc, CROSS_WIDTH)
+            else:
+                color = (*CIRCLE_COLOR, alpha)
+                radius = CIRCLE_RADIUS
+                center = (SQUARE_SIZE // 2, SQUARE_SIZE // 2)
+                pygame.draw.circle(ghost_surf, color, center, radius, CIRCLE_WIDTH)
 
         self.screen.blit(
             ghost_surf,
@@ -127,12 +148,6 @@ class Renderer:
         """Dibuja las líneas del tablero y el borde completo."""
         self.screen.fill(BG_COLOR)
 
-        # Borde completo del tablero (coincide con el divisor)
-        # Rectángulo desplazado
-        # Left = self.board_offset_x
-        # Top = BOARD_OFFSET_Y
-        # Width = BOARD_WIDTH
-        # Height = BOARD_HEIGHT area (HEIGHT - OFFSETS - MARGINS?) actually just square * rows
         board_height = BOARD_ROWS * SQUARE_SIZE
         pygame.draw.rect(
             self.screen,
@@ -169,7 +184,14 @@ class Renderer:
                 center_x = col * SQUARE_SIZE + SQUARE_SIZE // 2 + self.board_offset_x
                 center_y = row * SQUARE_SIZE + SQUARE_SIZE // 2 + BOARD_OFFSET_Y
 
-                if board_array[row][col] == 1:
+                
+                is_p1 = (board_array[row][col] == 1)
+                is_p2 = (board_array[row][col] == 2)
+                
+                draw_x = (is_p1 and not self.inverted_symbols) or (is_p2 and self.inverted_symbols)
+                draw_o = (is_p2 and not self.inverted_symbols) or (is_p1 and self.inverted_symbols)
+
+                if draw_x:
                     margin = SQUARE_SIZE // 4
                     start_desc = (center_x - margin, center_y - margin)
                     end_desc = (center_x + margin, center_y + margin)
@@ -181,7 +203,7 @@ class Renderer:
                     pygame.draw.line(
                         self.screen, CROSS_COLOR, start_asc, end_asc, CROSS_WIDTH
                     )
-                elif board_array[row][col] == 2:
+                elif draw_o:
                     pygame.draw.circle(
                         self.screen,
                         CIRCLE_COLOR,
@@ -191,7 +213,6 @@ class Renderer:
                     )
 
     def draw_win_line(self, board):
-        """Dibuja la línea que tacha la jugada ganadora con efecto 'Glow'."""
         if not board.win_info:
             return
 
@@ -222,13 +243,12 @@ class Renderer:
         # Efecto Neon Glow
         # Dibujamos varias líneas con distinta transparencia y grosor
         glow_colors = [
-            (*WIN_LINE_COLOR, 50),  # Ancho, muy transparente
-            (*WIN_LINE_COLOR, 100),  # Medio
-            (*WIN_LINE_COLOR, 255),  # Centro sólido
+            (*WIN_LINE_COLOR, 50),  
+            (*WIN_LINE_COLOR, 100), 
+            (*WIN_LINE_COLOR, 255),  
         ]
         widths = [LINE_WIDTH + 15, LINE_WIDTH + 5, LINE_WIDTH]
 
-        # Necesitamos una surface con alpha para el glow
         glow_surf = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
 
         for i in range(3):
@@ -237,7 +257,6 @@ class Renderer:
         self.screen.blit(glow_surf, (0, 0))
 
     def draw_game_over_text(self, board):
-        """Muestra un mensaje al final del juego."""
         if not board.game_over:
             return
 
@@ -316,7 +335,7 @@ class Renderer:
         # Tamaño de los mini tableros
         mini_size = 50
 
-        # Nodo raíz (Estado actual - Placeholder o texto)
+        # Nodo raíz (Estado actual - texto)
         root_x = center_x - mini_size // 2
         root_y = 50
 
@@ -325,7 +344,7 @@ class Renderer:
         root_label_rect = root_label.get_rect(center=(center_x, 30))
         self.screen.blit(root_label, root_label_rect)
 
-        # Nota: No tenemos el estado del tablero raíz pasado explícitamente aquí,
+        # No tenemos el estado del tablero raíz pasado explícitamente aquí,
         # así que dibujaremos un círculo o caja como "Raíz" simbólica
         root_pos = (center_x, root_y + mini_size // 2)
         pygame.draw.circle(self.screen, NODE_COLOR, root_pos, 10)
@@ -336,7 +355,6 @@ class Renderer:
             return
 
         # Layout Grid para los hijos
-        # Intentar encajar en columnas/filas si son muchos
         cols = 3
         rows = math.ceil(num_children / cols)
 

@@ -41,7 +41,7 @@ class Board:
         self.turn = 2 if self.turn == 1 else 1
 
     def is_full(self):
-        """Verifica si el tablero está lleno (no hay ceros)."""
+        """Verifica si el tablero está lleno."""
         return 0 not in self.board
 
     def check_win(self):

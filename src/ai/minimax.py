@@ -13,7 +13,7 @@ HUMAN_PLAYER = 1
 def minimax_bruteforce(
     board: Board, depth: int, is_maximizing: bool, counter: Dict[str, int]
 ) -> int:
-    """Versión original, ahora cuenta los nodos evaluados."""
+    """Versión original, cuenta los nodos evaluados."""
     counter["nodes"] += 1  # Incrementa el contador en cada llamada
     if board.winner == AI_PLAYER:
         return 1

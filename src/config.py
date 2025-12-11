@@ -1,32 +1,32 @@
-WIDTH, HEIGHT = 1100, 750  # Expanded for comfortable margins
+WIDTH, HEIGHT = 1100, 750  # Expandido para márgenes cómodos
 BOARD_WIDTH = 600
-BOARD_OFFSET_Y = 100  # Increased top margin
-BOARD_OFFSET_X = 50  # Left margin
+BOARD_OFFSET_Y = 100  # Margen superior
+BOARD_OFFSET_X = 50  # Margen izquierdo
 BOARD_ROWS, BOARD_COLS = 3, 3
 SQUARE_SIZE = BOARD_WIDTH // BOARD_COLS
 LINE_WIDTH = 15
 
 
-BG_COLOR = (40, 42, 54)  # Dark Charcoal (Dracula-like)
-LINE_COLOR = (189, 147, 249)  # Soft Purple
-SQUARE_HOVER_COLOR = (68, 71, 90)  # Slightly lighter charcoal
-CIRCLE_COLOR = (139, 233, 253)  # Cyan
-CROSS_COLOR = (255, 121, 198)  # Pink
-WIN_LINE_COLOR = (241, 250, 140)  # Yellow
+BG_COLOR = (40, 42, 54)  # Carbón oscuro
+LINE_COLOR = (189, 147, 249)  # Púrpura suave
+SQUARE_HOVER_COLOR = (68, 71, 90)  # Carbón ligeramente más claro
+CIRCLE_COLOR = (139, 233, 253)  # Cian
+CROSS_COLOR = (255, 121, 198)  # Rosa
+WIN_LINE_COLOR = (241, 250, 140)  # amarillo
 
 CIRCLE_RADIUS = SQUARE_SIZE // 3
 CIRCLE_WIDTH = 15
 CROSS_WIDTH = 25
 
 FONT_SIZE = 50
-FONT_COLOR = (248, 248, 242)  # White-ish
+FONT_COLOR = (248, 248, 242)  
 MENU_FONT_SIZE = 70
 MENU_SELECTED_COLOR = (255, 255, 0)
 
 FPS = 60
 
-# Graph Constants
-GRAPH_BG_COLOR = (40, 42, 54)  # Match Dracula background or similar
+# Constantes del Grafo
+GRAPH_BG_COLOR = (40, 42, 54)
 NODE_COLOR = (255, 255, 255)
 NODE_RADIUS = 20
 TEXT_COLOR = (255, 255, 255)

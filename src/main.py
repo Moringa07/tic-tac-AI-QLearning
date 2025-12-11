@@ -1,5 +1,6 @@
 import sys
 import time
+import random
 
 import pygame
 
@@ -11,6 +12,7 @@ from src.gui.renderer import Renderer
 HUMAN = "HUMAN"
 AI_SLOW = "AI_SLOW"
 AI_FAST = "AI_FAST"
+AI_START_SELECTION = "AI_START_SELECTION"
 
 
 def main_game_loop():
@@ -26,10 +28,9 @@ def main_game_loop():
     renderer = Renderer(screen)
 
     # --- Variables de Estado y Menú Ampliado ---
-    # --- Variables de Estado y Menú Ampliado ---
     game_state = "MENU"
     player_types = None
-    last_graph_data = []  # Store graph data to display
+    last_graph_data = []  
 
     menu_options = [
         "Humano vs Humano",
@@ -38,6 +39,12 @@ def main_game_loop():
         "IA Lenta vs IA Rápida (¡Observa!)",
     ]
     selected_option = 0
+    
+    # Variables del submenú de selección inicial
+    ai_speed_selected = None
+    start_selection_options = ["Humano Inicia", "IA Inicia"]
+    start_selected_option = 0
+    
     running = True
     menu_option_rects = []
 
@@ -56,44 +63,106 @@ def main_game_loop():
                     elif event.key == pygame.K_DOWN:
                         selected_option = (selected_option + 1) % len(menu_options)
                     elif event.key == pygame.K_RETURN:
-                        # Logic duplicated below, extracted for cleanliness ideally but inline is fine
                         if selected_option == 0:
                             player_types = [HUMAN, HUMAN]
+                            game_state = "PLAYING"
                         elif selected_option == 1:
-                            player_types = [HUMAN, AI_SLOW]
+                            ai_speed_selected = AI_SLOW
+                            game_state = AI_START_SELECTION
                         elif selected_option == 2:
-                            player_types = [HUMAN, AI_FAST]
-                        game_state = "PLAYING"
-                        waiting_for_step = False  # Initialize step flag
+                            ai_speed_selected = AI_FAST
+                            game_state = AI_START_SELECTION
+                        elif selected_option == 3:
+                            player_types = [AI_SLOW, AI_FAST]
+                            game_state = "PLAYING"
+                        
+                        waiting_for_step = False
                         pygame.event.clear()
 
-                # Input de Mouse (Clic)
                 if event.type == pygame.MOUSEBUTTONDOWN:
-                    if event.button == 1:  # Clic izquierdo
+                    if event.button == 1: 
                         for i, rect in enumerate(menu_option_rects):
                             if rect.collidepoint(mouse_pos):
                                 selected_option = i
-                                # Trigger selection
                                 if selected_option == 0:
                                     player_types = [HUMAN, HUMAN]
+                                    game_state = "PLAYING"
                                 elif selected_option == 1:
-                                    player_types = [HUMAN, AI_SLOW]
+                                    ai_speed_selected = AI_SLOW
+                                    game_state = AI_START_SELECTION
                                 elif selected_option == 2:
-                                    player_types = [HUMAN, AI_FAST]
+                                    ai_speed_selected = AI_FAST
+                                    game_state = AI_START_SELECTION
                                 elif selected_option == 3:
                                     player_types = [AI_SLOW, AI_FAST]
+                                    game_state = "PLAYING"
+                                
                                 board = Board()
                                 last_graph_data = []
-                                game_state = "PLAYING"
                                 pygame.event.clear()
                                 waiting_for_step = False
 
-            # Lógica Mouse Hover
             for i, rect in enumerate(menu_option_rects):
                 if rect.collidepoint(mouse_pos):
                     selected_option = i
 
             menu_option_rects = renderer.draw_menu(menu_options, selected_option)
+
+        elif game_state == AI_START_SELECTION:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_UP:
+                        start_selected_option = (start_selected_option - 1) % len(start_selection_options)
+                    elif event.key == pygame.K_DOWN:
+                        start_selected_option = (start_selected_option + 1) % len(start_selection_options)
+                    elif event.key == pygame.K_RETURN:
+                        p1 = HUMAN
+                        p2 = ai_speed_selected
+                        
+                        selection = start_selection_options[start_selected_option]
+                        
+                        if selection == "Humano Inicia":
+                            player_types = [p1, p2]
+                        elif selection == "IA Inicia":
+                            player_types = [p2, p1]
+                        
+                        board = Board()
+                        last_graph_data = []
+                        waiting_for_step = False
+                        game_state = "PLAYING"
+                        pygame.event.clear()
+
+                    elif event.key == pygame.K_ESCAPE:
+                        game_state = "MENU"
+
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    if event.button == 1:
+                        for i, rect in enumerate(menu_option_rects):
+                            if rect.collidepoint(mouse_pos):
+                                start_selected_option = i
+                                p1 = HUMAN
+                                p2 = ai_speed_selected
+                                selection = start_selection_options[start_selected_option]
+                                
+                                if selection == "Humano Inicia":
+                                    player_types = [p1, p2]
+                                elif selection == "IA Inicia":
+                                    player_types = [p2, p1]
+                                
+                                board = Board()
+                                last_graph_data = []
+                                waiting_for_step = False
+                                game_state = "PLAYING"
+                                pygame.event.clear()
+            
+            for i, rect in enumerate(menu_option_rects):
+                if rect.collidepoint(mouse_pos):
+                    start_selected_option = i
+            
+            menu_option_rects = renderer.draw_menu(start_selection_options, start_selected_option)
 
         # --- Lógica de la Partida ---
         elif game_state == "PLAYING":
@@ -105,7 +174,7 @@ def main_game_loop():
                     running = False
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
-                        board = Board()  # Hard reset
+                        board = Board()  
                         last_graph_data = []
                         pygame.event.clear()
                         waiting_for_step = False
@@ -136,36 +205,43 @@ def main_game_loop():
                             board.make_move(clicked_row, clicked_col)
 
             # Lógica para llamar a la IA correcta
-            # Centering Check
+            # Verificación de centrado
             is_h_vs_h = player_types == [HUMAN, HUMAN]
             renderer.set_centered(is_h_vs_h)
+            
+            # Verificación de inversión de símbolos
+            # Si el Humano es el Jugador 2, se espera que sea X (Visualmente) 
+            # Excepción en IA vs IA nada más
+            should_invert = False
+            if len(player_types) == 2:
+                if player_types[1] == HUMAN and player_types[0] != HUMAN:
+                     should_invert = True
+            
+            renderer.set_inverted(should_invert)
 
             # Step-by-step Wait Logic for AI vs AI
             is_ai_vs_ai = player_types == [AI_SLOW, AI_FAST]
 
             if is_ai_vs_ai and waiting_for_step:
-                # Draw "Press Enter" prompt
                 font_prompt = pygame.font.Font(None, 40)
                 prompt_surf = font_prompt.render(
                     "Presiona ENTER para siguiente jugada...", True, (255, 255, 0)
                 )
                 prompt_rect = prompt_surf.get_rect(center=(WIDTH // 2, HEIGHT - 50))
 
-                # Small background for readability
                 bg_rect = prompt_rect.inflate(20, 10)
                 pygame.draw.rect(screen, (0, 0, 0), bg_rect)
                 screen.blit(prompt_surf, prompt_rect)
 
                 pygame.display.update()
 
-                # Event loop specifically for waiting
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
                         running = False
                     if event.type == pygame.KEYDOWN:
                         if event.key == pygame.K_RETURN:
                             waiting_for_step = False
-                        elif event.key == pygame.K_r:  # Handle Restart during pause
+                        elif event.key == pygame.K_r: 
                             board = Board()
                             last_graph_data = []
                             pygame.event.clear()
@@ -173,7 +249,7 @@ def main_game_loop():
                             reset_triggered = True
                         if event.key == pygame.K_ESCAPE:
                             game_state = "MENU"
-                continue  # Skip the rest of loop until step is taken
+                continue  
 
             if (
                 not reset_triggered
@@ -182,7 +258,7 @@ def main_game_loop():
             ):
                 start_time = time.time()
                 move = None
-                pygame.display.update()  # Forzar dibujado antes de pensar
+                pygame.display.update()  
 
                 if current_player_type == AI_SLOW:
                     print(f"Turno {board.turn} (IA Lenta): Calculando movimiento...")
@@ -200,7 +276,7 @@ def main_game_loop():
                 if move:
                     board.make_move(move[0], move[1])
                     if is_ai_vs_ai:
-                        waiting_for_step = True  # Pause after this move
+                        waiting_for_step = True  # Pausa después de este movimiento
 
             # Dibujado
             renderer.draw_grid()
@@ -213,7 +289,7 @@ def main_game_loop():
             player_label = "HUMAN" if real_current_player == HUMAN else "IA"
             renderer.draw_turn_indicator(board.turn, player_label)
 
-            # Ghost Symbol (Hover)
+            # Símbolo Fantasma (Hover)
             if not board.game_over and current_player_type == HUMAN:
                 mouseX, mouseY = mouse_pos
                 if (
