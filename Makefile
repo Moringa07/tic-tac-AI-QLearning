@@ -1,9 +1,5 @@
 CONTAINER_NAME = tictactoe_dev
-
-# --- Targets ---
-
-# Declara que estos targets no son archivos, para que 'make' siempre los ejecute.
-.PHONY: help build start stop run install shell lint format clean prune
+.PHONY: help build start stop run simulate notebook install shell lint lint-fix lint-unsafe format clean-code prune pre-commit-install
 
 .DEFAULT_GOAL := help
 
@@ -14,22 +10,28 @@ help:
 	@echo "Uso: make [target]"
 	@echo ""
 	@echo "🎯 Targets Principales:"
-	@printf "  \033[36m%-15s\033[0m %s\n" "build" "Construye la imagen y levanta el contenedor por primera vez."
-	@printf "  \033[36m%-15s\033[0m %s\n" "start" "Inicia el contenedor si está detenido (sin reconstruir)."
-	@printf "  \033[36m%-15s\033[0m %s\n" "stop" "Detiene y elimina el contenedor y la red."
-	@printf "  \033[36m%-15s\033[0m %s\n" "run" "Ejecuta la aplicación principal (src/main.py)."
-	@printf "  \033[36m%-15s\033[0m %s\n" "run" "Ejecuta las simulaciones (src/simulate.py)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "build" "Construye la imagen y levanta el contenedor por primera vez."
+	@printf "  \033[36m%-18s\033[0m %s\n" "start" "Inicia el contenedor si está detenido."
+	@printf "  \033[36m%-18s\033[0m %s\n" "stop" "Detiene y elimina el contenedor."
+	@printf "  \033[36m%-18s\033[0m %s\n" "run" "Jugar: Ejecuta la interfaz gráfica (src/main.py)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "simulate" "Estadísticas: Ejecuta las simulaciones (src/simulate.py)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "notebook" "Análisis: Lanza Jupyter Lab en el navegador."
 	@echo ""
-	@echo "🛠️ Targets de Desarrollo:"
-	@printf "  \033[36m%-15s\033[0m %s\n" "install" "Instala/sincroniza las dependencias de pyproject.toml."
-	@printf "  \033[36m%-15s\033[0m %s\n" "shell" "Abre una terminal interactiva (bash) dentro del contenedor."
-	@printf "  \033[36m%-15s\033[0m %s\n" "lint" "Revisa el código en busca de errores con Ruff."
-	@printf "  \033[36m%-15s\033[0m %s\n" "format" "Formatea el código automáticamente con Ruff."
+	@echo "💎 Calidad de Código (Ruff):"
+	@printf "  \033[36m%-18s\033[0m %s\n" "lint" "Solo revisa errores (sin modificar nada)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "lint-fix" "Revisa y ARREGLA errores seguros (imports, estilo)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "lint-unsafe" "LIMPIEZA PROFUNDA: Borra variables no usadas (agresivo)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "format" "Re-ordena el código para que se vea bonito."
+	@printf "  \033[36m%-18s\033[0m %s\n" "clean-code" "Combo: Ejecuta format + lint-fix."
 	@echo ""
-	@echo "🧹 Targets de Limpieza:"
-	@printf "  \033[36m%-15s\033[0m %s\n" "prune" "¡CUIDADO! Elimina TODAS las imágenes, contenedores y volúmenes no usados de Podman."
-	@printf "pre-commit-install "Para configurar pre commits""
+	@echo "🛠️ Desarrollo y Configuración:"
+	@printf "  \033[36m%-18s\033[0m %s\n" "install" "Sincroniza dependencias (uv sync)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "shell" "Entra a la terminal del contenedor."
+	@printf "  \033[36m%-18s\033[0m %s\n" "pre-commit-install" "Instala los git hooks para chequeo automático."
+	@printf "  \033[36m%-18s\033[0m %s\n" "prune" "¡PELIGRO! Borra todas las imágenes y contenedores de Podman."
 	@echo ""
+
+# --- Construcción y Ejecución ---
 
 build: ## Construye y levanta el contenedor desde cero
 	@echo "-> Construyendo y levantando el entorno de desarrollo..."
@@ -63,26 +65,43 @@ notebook: ## Lanza un servidor de Jupyter Lab para el análisis de datos
 		--no-browser \
 		--allow-root
 
-install: ## Sincroniza las dependencias
-	@echo "-> Sincronizando dependencias con uv..."
-	@podman exec -it $(CONTAINER_NAME) uv sync
+# --- Gestión de Dependencias y Entorno ---
+
+install: ## Sincroniza las dependencias (main Y dev)
+	@echo "-> Sincronizando dependencias con uv (incluyendo --dev)..."
+	@podman exec -it $(CONTAINER_NAME) uv sync --dev
 
 shell: ## Entra al contenedor
 	@echo "-> Abriendo terminal en el contenedor '$(CONTAINER_NAME)'..."
 	@podman exec -it $(CONTAINER_NAME) /bin/bash
 
-lint: ## Revisa el código
-	@echo "-> Revisando el código con Ruff..."
+pre-commit-install: ## Instala los git hooks en tu repositorio local
+	@echo "-> Instalando git hooks con pre-commit..."
+	@podman exec -it $(CONTAINER_NAME) pre-commit install
+
+prune: ## Limpieza profunda de Podman
+	@echo "-> Limpiando el sistema Podman (imágenes, contenedores, volúmenes)..."
+	@podman system prune -a --volumes --force
+
+# --- Calidad de Código y Limpieza (Ruff) ---
+
+lint: ## Solo revisa, no toca nada
+	@echo "-> Revisando el código con Ruff (Solo lectura)..."
 	@podman exec -it $(CONTAINER_NAME) ruff check .
+
+lint-fix: ## Arregla cosas seguras (imports, espacios)
+	@echo "-> Aplicando correcciones seguras con Ruff..."
+	@podman exec -it $(CONTAINER_NAME) ruff check . --fix
+
+lint-unsafe: ## Arregla variables no usadas (Agresivo)
+	@echo "-> Aplicando correcciones AGRESIVAS (variables no usadas)..."
+	@podman exec -it $(CONTAINER_NAME) ruff check . --fix --unsafe-fixes
 
 format: ## Formatea el código
 	@echo "-> Formateando el código con Ruff..."
 	@podman exec -it $(CONTAINER_NAME) ruff format .
 
-prune: ## Limpieza profunda de Podman
-	@echo "-> Limpiando el sistema Podman (imágenes, contenedores, volúmenes)..."
-	@podman system prune -a --volumes --force
-# ... (otros targets)
-pre-commit-install: ## Instala los git hooks en tu repositorio local
-	@echo "-> Instalando git hooks con pre-commit..."
-	@podman exec -it $(CONTAINER_NAME) pre-commit install
+clean-code: ## Combo: Formatear y Arreglar
+	@echo "-> Limpiando y embelleciendo todo el código..."
+	@make format
+	@make lint-fix

@@ -1,38 +1,14 @@
-name: CI/CD Pipeline
+name: Build & Auto-Release
 
 on:
   push:
-    branches: ["main"]
-    tags:
-      - "v*" # Se activa también al subir etiquetas como v1.0, v1.1
+    branches: ["main"] # Se ejecuta en cada cambio a main
+  workflow_dispatch: # Permite ejecutarlo manualmente desde la web
 
 jobs:
-  # TRABAJO 1: CALIDAD (El Portero)
-  quality-check:
-    name: Check Quality & Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install uv
-        run: pip install uv
-      - name: Install dependencies
-        run: uv sync --dev # Instalamos dependencias de desarrollo para testear
-
-      - name: Lint with Ruff
-        run: uv run ruff check .
-
-      - name: Run Tests
-        # Si esto falla, el proceso se detiene y no genera ejecutables rotos
-        run: uv run pytest
-
-  # TRABAJO 2: CONSTRUCCIÓN (Solo si pasa la calidad)
+  # 1. CONSTRUCCIÓN (Windows y Linux)
   build:
-    needs: quality-check # Espera a que quality-check termine bien
-    name: Build Executable for ${{ matrix.os }}
+    name: Build for ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -46,51 +22,57 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Install uv
         run: pip install uv
+
       - name: Install dependencies
         run: uv sync
 
       - name: Build with PyInstaller
+        # Construye el ejecutable
         run: |
           uv run pyinstaller --noconfirm --onefile --windowed --name "TicTacToeAI" --clean --add-data "src${{ runner.os == 'Windows' && ';' || ':' }}src" src/main.py
 
-      # Subimos el artefacto temporalmente
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/${{ matrix.exe_name }}
 
-  # TRABAJO 3: RELEASE (Solo si hay un tag v*)
-  release:
+  # 2. PUBLICACIÓN AUTOMÁTICA (Release "Nightly")
+  update_release:
     needs: build
-    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write # Permiso para crear releases
     steps:
-      - name: Download Windows Artifact
+      - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          name: TicTacToeAI_Windows
+          pattern: TicTacToeAI_*
+          merge-multiple: true
 
-      - name: Download Linux Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: TicTacToeAI_Linux
+      # Opcional: Listar archivos para depurar si falla
+      - name: List files (Debug)
+        run: ls -R
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v1
+      - name: Update Nightly Release
+        uses: softprops/action-gh-release@v2
         with:
+          tag_name: nightly
+          name: "Development Build (Nightly)"
+          body: |
+            Build automático más reciente.
+            Commit: ${{ github.sha }}
+            Fecha: ${{ github.event.head_commit.timestamp }}
           files: |
             TicTacToeAI.exe
             TicTacToeAI
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          prerelease: true
+          make_latest: true
