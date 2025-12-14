@@ -41,7 +41,8 @@ jobs:
           uv run pyinstaller --noconfirm --onefile --windowed --name "TicTacToeAI" --clean --add-data "src${{ runner.os == 'Windows' && ';' || ':' }}src" src/main.py
 
       - name: Upload Artifacts
-        uses: actions/upload_artifact@v4
+        # CORRECCIÓN AQUÍ: Es 'upload-artifact' (con guion medio)
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.artifact_name }}
           path: dist/${{ matrix.exe_name }}
