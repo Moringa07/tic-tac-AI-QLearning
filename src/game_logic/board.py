@@ -1,18 +1,21 @@
 from typing import List, Tuple
 
-import numpy as np
-
+# Eliminamos la dependencia de numpy para el procesamiento en tiempo real
+# import numpy as np  <-- Ya no lo necesitamos aquí
 from src.config import BOARD_COLS, BOARD_ROWS
 
 
 class Board:
     def __init__(self):
-        self.board = np.zeros((BOARD_ROWS, BOARD_COLS))
+        # Inicializamos con listas de listas
+        self.board = [[0 for _ in range(BOARD_COLS)] for _ in range(BOARD_ROWS)]
         self.reset()
 
     def reset(self):
         """Reinicia el tablero a su estado inicial."""
-        self.board.fill(0)
+        for row in range(BOARD_ROWS):
+            for col in range(BOARD_COLS):
+                self.board[row][col] = 0
         self.winner = 0
         self.turn = 1
         self.game_over = False
@@ -36,33 +39,42 @@ class Board:
             return True
         return False
 
+    def undo_move(self, row, col, prev_turn, prev_winner, prev_game_over, prev_win_info):
+        """Revierte el tablero a un estado anterior exacto."""
+        self.board[row][col] = 0
+        self.turn = prev_turn
+        self.winner = prev_winner
+        self.game_over = prev_game_over
+        self.win_info = prev_win_info
+
     def switch_turn(self):
         """Cambia el turno del jugador."""
         self.turn = 2 if self.turn == 1 else 1
 
     def is_full(self):
         """Verifica si el tablero está lleno."""
-        return 0 not in self.board
+        # Forma rápida en listas de listas:
+        for row in self.board:
+            if 0 in row:
+                return False
+        return True
 
     def check_win(self):
-        """Verifica todas las condiciones de victoria."""
-        player = self.turn
-        # Comprobar filas
-        for row in range(BOARD_ROWS):
-            if np.all(self.board[row] == player):
-                self.win_info = ("row", row)
+        """Versión optimizada para 3x3 con listas."""
+        b = self.board
+        p = self.turn
+
+        # Filas y Columnas
+        for i in range(3):
+            if b[i][0] == b[i][1] == b[i][2] == p:
                 return True
-        # Comprobar columnas
-        for col in range(BOARD_COLS):
-            if np.all(self.board[:, col] == player):
-                self.win_info = ("col", col)
+            if b[0][i] == b[1][i] == b[2][i] == p:
                 return True
-        # Comprobar diagonales
-        if np.all(np.diag(self.board) == player):
-            self.win_info = ("diag", 1)  # Diagonal descendente
+
+        # Diagonales
+        if b[0][0] == b[1][1] == b[2][2] == p:
             return True
-        if np.all(np.diag(np.fliplr(self.board)) == player):
-            self.win_info = ("diag", 2)  # Diagonal ascendente
+        if b[0][2] == b[1][1] == b[2][0] == p:
             return True
 
         return False

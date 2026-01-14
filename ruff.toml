@@ -1,6 +1,6 @@
 line-length = 120
 
-extend-exclude = ["queries", "src/queries"]
+extend-exclude = []
 
 [lint]
 select = ["E", "F", "I"]
