@@ -50,6 +50,7 @@ class GameController:
             "Humano vs IA (Lenta - Minimax)",
             "Humano vs IA (Rápida - AlfaBeta)",
             "IA Lenta vs IA Rápida",
+            "Humano vs QLearning",
         ]
         self.menu_selection = 0
 
@@ -59,7 +60,6 @@ class GameController:
         self.menu_rects = []
 
     def run(self):
-        """Bucle principal del juego"""
         while self.running:
             self.handle_events()
             self.update()
@@ -86,7 +86,6 @@ class GameController:
                 self._handle_playing_input(event)
 
     def _handle_menu_input(self, event, options_list, is_main_menu):
-        """Maneja input para menús (teclado y mouse) de forma genérica"""
         selection_attr = "menu_selection" if is_main_menu else "start_selection"
         current_selection = getattr(self, selection_attr)
 

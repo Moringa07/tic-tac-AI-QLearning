@@ -3,6 +3,7 @@ from typing import List
 import pygame
 
 from src.config import *
+from src.gui.shapes import ShapeDrawer
 
 
 class Renderer:
@@ -43,12 +44,10 @@ class Renderer:
         title_rect_main = title_text_main.get_rect(center=(WIDTH // 2, HEIGHT // 4))
         self.screen.blit(title_text_main, title_rect_main)
 
-        # Opciones del menú
         for i, option in enumerate(options):
             center_x = WIDTH // 2
             center_y = HEIGHT // 2 + i * (FONT_SIZE + 35)
 
-            # Texto base
             if i == selected_option:
                 color = MENU_SELECTED_COLOR
                 text_content = f">  {option}  <"
@@ -72,7 +71,6 @@ class Renderer:
 
             self.screen.blit(text, rect)
 
-            # Guardar el rectángulo de colisión (un poco más grande para facilitar el clic)
             hitbox = rect.inflate(40, 20)
             option_rects.append(hitbox)
 
@@ -98,54 +96,22 @@ class Renderer:
         self.screen.blit(text, text_rect)
 
     def draw_ghost_symbol(self, row, col, turn):
-        """Dibuja un símbolo semitransparente (hover)."""
-        col * SQUARE_SIZE + SQUARE_SIZE // 2 + self.board_offset_x
-        row * SQUARE_SIZE + SQUARE_SIZE // 2 + BOARD_OFFSET_Y
+        cell_rect = pygame.Rect(
+            col * SQUARE_SIZE + self.board_offset_x, row * SQUARE_SIZE + BOARD_OFFSET_Y, SQUARE_SIZE, SQUARE_SIZE
+        )
 
-        # Crear superficie temporal con transparencia
-        ghost_surf = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+        ghost_surf = pygame.Surface((cell_rect.width, cell_rect.height), pygame.SRCALPHA)
 
-        alpha = 100
+        local_rect = pygame.Rect(0, 0, cell_rect.width, cell_rect.height)
+
+        color = (*CROSS_COLOR, 100) if turn == 1 else (*CIRCLE_COLOR, 100)
 
         if turn == 1:
-            if self.inverted_symbols:
-                color = (*CIRCLE_COLOR, alpha)
-                radius = CIRCLE_RADIUS
-                center = (SQUARE_SIZE // 2, SQUARE_SIZE // 2)
-                pygame.draw.circle(ghost_surf, color, center, radius, CIRCLE_WIDTH)
-            else:
-                margin = SQUARE_SIZE // 4
-                color = (*CROSS_COLOR, alpha)
-                start_desc = (margin, margin)
-                end_desc = (SQUARE_SIZE - margin, SQUARE_SIZE - margin)
-                start_asc = (margin, SQUARE_SIZE - margin)
-                end_asc = (SQUARE_SIZE - margin, margin)
-                pygame.draw.line(ghost_surf, color, start_desc, end_desc, CROSS_WIDTH)
-                pygame.draw.line(ghost_surf, color, start_asc, end_asc, CROSS_WIDTH)
-
+            ShapeDrawer.draw_x(ghost_surf, local_rect, color)
         else:
-            if self.inverted_symbols:
-                margin = SQUARE_SIZE // 4
-                color = (*CROSS_COLOR, alpha)
-                start_desc = (margin, margin)
-                end_desc = (SQUARE_SIZE - margin, SQUARE_SIZE - margin)
-                start_asc = (margin, SQUARE_SIZE - margin)
-                end_asc = (SQUARE_SIZE - margin, margin)
-                pygame.draw.line(ghost_surf, color, start_desc, end_desc, CROSS_WIDTH)
-                pygame.draw.line(ghost_surf, color, start_asc, end_asc, CROSS_WIDTH)
-            else:
-                color = (*CIRCLE_COLOR, alpha)
-                radius = CIRCLE_RADIUS
-                center = (SQUARE_SIZE // 2, SQUARE_SIZE // 2)
-                pygame.draw.circle(ghost_surf, color, center, radius, CIRCLE_WIDTH)
+            ShapeDrawer.draw_o(ghost_surf, local_rect, color)
 
-        self.screen.blit(
-            ghost_surf,
-            (
-                col * SQUARE_SIZE + self.board_offset_x,
-                row * SQUARE_SIZE + BOARD_OFFSET_Y,
-            ),
-        )
+        self.screen.blit(ghost_surf, cell_rect.topleft)
 
     def draw_grid(self):
         """Dibuja las líneas del tablero y el borde completo."""
@@ -181,46 +147,28 @@ class Renderer:
             )
 
     def draw_symbols(self, board_array):
-        """Dibuja las X y O en el tablero."""
         for row in range(BOARD_ROWS):
             for col in range(BOARD_COLS):
-                center_x = col * SQUARE_SIZE + SQUARE_SIZE // 2 + self.board_offset_x
-                center_y = row * SQUARE_SIZE + SQUARE_SIZE // 2 + BOARD_OFFSET_Y
+                # 1. Creamos el Rect que representa esta celda
+                cell_rect = pygame.Rect(
+                    col * SQUARE_SIZE + self.board_offset_x,
+                    row * SQUARE_SIZE + BOARD_OFFSET_Y,
+                    SQUARE_SIZE,
+                    SQUARE_SIZE,
+                )
 
-                is_p1 = board_array[row][col] == 1
-                is_p2 = board_array[row][col] == 2
+                val = board_array[row][col]
+                if val == 0:
+                    continue
 
-                draw_x = (is_p1 and not self.inverted_symbols) or (is_p2 and self.inverted_symbols)
-                draw_o = (is_p2 and not self.inverted_symbols) or (is_p1 and self.inverted_symbols)
+                # 2. Decidimos qué símbolo y color usar
+                is_x = (val == 1 and not self.inverted_symbols) or (val == 2 and self.inverted_symbols)
 
-                if draw_x:
-                    margin = SQUARE_SIZE // 4
-                    start_desc = (center_x - margin, center_y - margin)
-                    end_desc = (center_x + margin, center_y + margin)
-                    start_asc = (center_x - margin, center_y + margin)
-                    end_asc = (center_x + margin, center_y - margin)
-                    pygame.draw.line(
-                        self.screen,
-                        CROSS_COLOR,
-                        start_desc,
-                        end_desc,
-                        CROSS_WIDTH,
-                    )
-                    pygame.draw.line(
-                        self.screen,
-                        CROSS_COLOR,
-                        start_asc,
-                        end_asc,
-                        CROSS_WIDTH,
-                    )
-                elif draw_o:
-                    pygame.draw.circle(
-                        self.screen,
-                        CIRCLE_COLOR,
-                        (center_x, center_y),
-                        CIRCLE_RADIUS,
-                        CIRCLE_WIDTH,
-                    )
+                # 3. Llamada atómica
+                if is_x:
+                    ShapeDrawer.draw_x(self.screen, cell_rect, CROSS_COLOR)
+                else:
+                    ShapeDrawer.draw_o(self.screen, cell_rect, CIRCLE_COLOR)
 
     def draw_win_line(self, board):
         if not board.win_info:
@@ -283,7 +231,6 @@ class Renderer:
         restart_text = self.font.render("Pulsa 'R' para reiniciar", True, FONT_COLOR)
         restart_rect = restart_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + 50))
 
-        # Fondo semi-transparente para el texto
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
         overlay.fill((0, 0, 0, 120))
         self.screen.blit(overlay, (0, 0))
@@ -293,7 +240,7 @@ class Renderer:
 
     def draw_mini_board(self, x, y, size, board_state):
         """Dibuja un mini tablero en la posición (x, y)."""
-        # Fondo del mini tablero
+
         rect = pygame.Rect(x, y, size, size)
         pygame.draw.rect(self.screen, (255, 255, 255), rect)
         pygame.draw.rect(self.screen, LINE_COLOR, rect, 2)
@@ -317,26 +264,15 @@ class Renderer:
                 1,
             )
 
-        # Símbolos
-        font_mini = pygame.font.Font(None, int(cell_size * 1.5))
         for r in range(3):
             for c in range(3):
+                mini_cell_rect = pygame.Rect(x + c * cell_size, y + r * cell_size, cell_size, cell_size)
                 val = board_state[r][c]
-                if val != 0:
-                    if self.inverted_symbols:
-                        symbol = "O" if val == 1 else "X"
-                    else:
-                        symbol = "X" if val == 1 else "O"
 
-                    color = (0, 0, 0)
-                    text = font_mini.render(symbol, True, color)
-                    text_rect = text.get_rect(
-                        center=(
-                            x + c * cell_size + cell_size // 2,
-                            y + r * cell_size + cell_size // 2,
-                        )
-                    )
-                    self.screen.blit(text, text_rect)
+                if val == 1:
+                    ShapeDrawer.draw_x(self.screen, mini_cell_rect, (0, 0, 0), width_weight=0.15)
+                elif val == 2:
+                    ShapeDrawer.draw_o(self.screen, mini_cell_rect, (0, 0, 0), width_weight=0.15)
 
     def _get_tree_depth(self, node):
         """Calcula la profundidad máxima visual del árbol actual."""

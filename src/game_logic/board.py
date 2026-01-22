@@ -1,7 +1,5 @@
 from typing import List, Tuple
 
-# Eliminamos la dependencia de numpy para el procesamiento en tiempo real
-# import numpy as np  <-- Ya no lo necesitamos aquí
 from src.config import BOARD_COLS, BOARD_ROWS
 
 
@@ -60,21 +58,30 @@ class Board:
         return True
 
     def check_win(self):
-        """Versión optimizada para 3x3 con listas."""
+        """Versión compatible con el Renderer (win_type, index)."""
         b = self.board
         p = self.turn
 
-        # Filas y Columnas
-        for i in range(3):
-            if b[i][0] == b[i][1] == b[i][2] == p:
-                return True
-            if b[0][i] == b[1][i] == b[2][i] == p:
+        # Filas
+        for r in range(3):
+            if b[r][0] == b[r][1] == b[r][2] == p:
+                self.win_info = ("row", r)
                 return True
 
-        # Diagonales
+        # Columnas
+        for c in range(3):
+            if b[0][c] == b[1][c] == b[2][c] == p:
+                self.win_info = ("col", c)
+                return True
+
+        # Diagonal Principal
         if b[0][0] == b[1][1] == b[2][2] == p:
+            self.win_info = ("diag", 1)
             return True
+
+        # Diagonal Secundaria
         if b[0][2] == b[1][1] == b[2][0] == p:
+            self.win_info = ("diag", 2)
             return True
 
         return False
