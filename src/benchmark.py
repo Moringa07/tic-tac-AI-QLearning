@@ -1,3 +1,4 @@
+import glob
 import os
 
 from src.ai.minimax import find_best_move_and_viz
@@ -5,32 +6,19 @@ from src.ai.qlearning import QLearningAgent
 from src.game_logic.board import Board
 
 
-def run_benchmark(num_games=50):
-    ql_agent = QLearningAgent(epsilon=0)
-    model_path = "src/models/q_table.pkl"
+def evaluate_model(model_path, num_games=20):
+    agent = QLearningAgent(epsilon=0)
+    agent.load_model(model_path)
 
-    if not os.path.exists(model_path):
-        print("Error: No se encontró el modelo entrenado en src/models/q_table.pkl")
-        return
-
-    ql_agent.load_model(model_path)
-
-    stats = {"wins": 0, "losses": 0, "draws": 0}
-
-    print(f"Iniciando Benchmark: Q-Learning vs Minimax ({num_games} partidas)...")
-    print("-" * 50)
+    wins, losses, draws = 0, 0, 0
 
     for i in range(num_games):
         board = Board()
         ql_is_p1 = i % 2 == 0
 
         while not board.game_over:
-            current_player = board.turn
-
-            is_ql_turn = (current_player == 1 and ql_is_p1) or (current_player == 2 and not ql_is_p1)
-
-            if is_ql_turn:
-                move = ql_agent.choose_action(board)
+            if (board.turn == 1 and ql_is_p1) or (board.turn == 2 and not ql_is_p1):
+                move = agent.choose_action(board)
             else:
                 move, _ = find_best_move_and_viz(board, use_alpha_beta=True)
 
@@ -38,34 +26,29 @@ def run_benchmark(num_games=50):
                 board.make_move(move[0], move[1])
 
         if board.winner == 0:
-            stats["draws"] += 1
-            result_str = "Empate"
+            draws += 1
         elif (board.winner == 1 and ql_is_p1) or (board.winner == 2 and not ql_is_p1):
-            stats["wins"] += 1
-            result_str = "Victoria QL"
+            wins += 1
         else:
-            stats["losses"] += 1
-            result_str = "Victoria Minimax"
+            losses += 1
 
-        print(f"Partida {i + 1:02d}: {result_str} (QL inicia: {ql_is_p1})")
+    return wins, losses, draws
 
-    total = num_games
-    win_rate = (stats["wins"] / total) * 100
-    loss_rate = (stats["losses"] / total) * 100
-    draw_rate = (stats["draws"] / total) * 100
 
-    print("-" * 50)
-    print("RESUMEN FINAL:")
-    print(f"Victorias Q-Learning: {stats['wins']} ({win_rate:.1f}%)")
-    print(f"Derrotas Q-Learning:  {stats['losses']} ({loss_rate:.1f}%)")
-    print(f"Empates:              {stats['draws']} ({draw_rate:.1f}%)")
-    print("-" * 50)
+def run_tournament():
+    model_files = sorted(glob.glob("src/models/q_table_*.pkl"), key=os.path.getmtime)
 
-    if loss_rate == 0:
-        print("¡Resultado Perfecto! El agente Q-Learning es invencible.")
-    else:
-        print("El agente aún tiene debilidades frente a Minimax.")
+    print(f"{'MODELO':<25} | {'W':<3} | {'L':<3} | {'D':<3} | {'EFICACIA':<10}")
+    print("-" * 60)
+
+    for path in model_files:
+        name = os.path.basename(path)
+        w, l, d = evaluate_model(path)
+
+        efficiency = ((w + d) / (w + l + d)) * 100
+
+        print(f"{name:<25} | {w:<3} | {l:<3} | {d:<3} | {efficiency:>8.1f}%")
 
 
 if __name__ == "__main__":
-    run_benchmark(50)
+    run_tournament()
