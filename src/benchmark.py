@@ -1,111 +1,71 @@
-# simulate.py
+import os
 
-import csv
-import random
-import time
-from typing import Dict, List, Tuple
-
-# Importamos las nuevas funciones específicas para la simulación
-from ai.minimax import (
-    get_simulation_move_alpha_beta,
-    get_simulation_move_bruteforce,
-)
-from game_logic.board import Board
-
-# --- CONFIGURACIÓN DEL EXPERIMENTO ---
-NUM_SIMULATIONS_PER_BATCH = 10  # teorema del limite central tiende a dist normal
-CSV_FILENAME = "queries/full_simulation_results.csv"
-
-# Tipos de jugadores para la simulación
-AI_SLOW = "Minimax"
-AI_FAST = "Alpha-Beta"
-RANDOM = "Random"
+from src.ai.minimax import find_best_move_and_viz
+from src.ai.qlearning import QLearningAgent
+from src.game_logic.board import Board
 
 
-def get_ai_move(board: Board, player_type: str) -> Tuple[Tuple[int, int], int]:
-    """Llama a la función de IA correcta y retorna el movimiento y los nodos."""
-    if player_type == AI_SLOW:
-        return get_simulation_move_bruteforce(board)
-    elif player_type == AI_FAST:
-        return get_simulation_move_alpha_beta(board)
-    return ((-1, -1), 0)
+def run_benchmark(num_games=50):
+    ql_agent = QLearningAgent(epsilon=0)
+    model_path = "src/models/q_table.pkl"
 
+    if not os.path.exists(model_path):
+        print("Error: No se encontró el modelo entrenado en src/models/q_table.pkl")
+        return
 
-def get_random_move(board: Board) -> Tuple[int, int]:
-    """Elige un movimiento válido al azar."""
-    return random.choice(board.get_available_moves())
+    ql_agent.load_model(model_path)
 
+    stats = {"wins": 0, "losses": 0, "draws": 0}
 
-def run_single_simulation(player1_type: str, player2_type: str) -> List[Dict]:
-    """Simula una partida entre dos tipos de jugadores definidos."""
-    board = Board()
-    game_records = []
-    turn_number = 1
+    print(f"Iniciando Benchmark: Q-Learning vs Minimax ({num_games} partidas)...")
+    print("-" * 50)
 
-    while not board.game_over:
-        current_player = player1_type if (turn_number % 2 != 0) else player2_type
+    for i in range(num_games):
+        board = Board()
+        ql_is_p1 = i % 2 == 0
 
-        start_time = time.time()
-        nodes_evaluated = 0
+        while not board.game_over:
+            current_player = board.turn
 
-        if current_player == RANDOM:
-            move = get_random_move(board)
-        else:  # Es una IA
-            move, nodes_evaluated = get_ai_move(board, current_player)
+            is_ql_turn = (current_player == 1 and ql_is_p1) or (current_player == 2 and not ql_is_p1)
 
-        end_time = time.time()
+            if is_ql_turn:
+                move = ql_agent.choose_action(board)
+            else:
+                move, _ = find_best_move_and_viz(board, use_alpha_beta=True)
 
-        if move != (-1, -1):
-            board.make_move(move[0], move[1])
+            if move:
+                board.make_move(move[0], move[1])
 
-        record = {
-            "turn": turn_number,
-            "pieces_on_board": turn_number - 1,
-            "algorithm": current_player,
-            "nodes_evaluated": nodes_evaluated,
-            "time_seconds": end_time - start_time,
-            "winner": board.winner if board.game_over else 0,
-        }
-        game_records.append(record)
-        turn_number += 1
+        if board.winner == 0:
+            stats["draws"] += 1
+            result_str = "Empate"
+        elif (board.winner == 1 and ql_is_p1) or (board.winner == 2 and not ql_is_p1):
+            stats["wins"] += 1
+            result_str = "Victoria QL"
+        else:
+            stats["losses"] += 1
+            result_str = "Victoria Minimax"
 
-    return game_records
+        print(f"Partida {i + 1:02d}: {result_str} (QL inicia: {ql_is_p1})")
 
+    total = num_games
+    win_rate = (stats["wins"] / total) * 100
+    loss_rate = (stats["losses"] / total) * 100
+    draw_rate = (stats["draws"] / total) * 100
 
-def main():
-    all_results = []
+    print("-" * 50)
+    print("RESUMEN FINAL:")
+    print(f"Victorias Q-Learning: {stats['wins']} ({win_rate:.1f}%)")
+    print(f"Derrotas Q-Learning:  {stats['losses']} ({loss_rate:.1f}%)")
+    print(f"Empates:              {stats['draws']} ({draw_rate:.1f}%)")
+    print("-" * 50)
 
-    experiment_batches = {
-        "Direct_Comparison": (AI_SLOW, AI_FAST),
-        "Minimax_Profile": (AI_SLOW, RANDOM),
-        "AlphaBeta_Profile": (AI_FAST, RANDOM),
-    }
-
-    total_sims = len(experiment_batches) * NUM_SIMULATIONS_PER_BATCH
-    print(f"Iniciando {total_sims} simulaciones en {len(experiment_batches)} lotes...")
-    sim_counter = 0
-    for batch_name, (p1, p2) in experiment_batches.items():
-        print(f"\n--- Ejecutando Lote: {batch_name} ({NUM_SIMULATIONS_PER_BATCH} partidas) ---")
-        for i in range(NUM_SIMULATIONS_PER_BATCH):
-            sim_counter += 1
-            print(f"  - Simulando partida {sim_counter}/{total_sims}...", end="\r")
-
-            results = run_single_simulation(p1, p2)
-            for record in results:
-                record["experiment_batch"] = batch_name
-                record["simulation_id"] = f"{batch_name}_{i + 1}"
-                all_results.append(record)
-        print(f"\nLote {batch_name} completado.")
-
-    print(f"\nSimulación finalizada. Guardando resultados en '{CSV_FILENAME}'...")
-    if all_results:
-        with open(CSV_FILENAME, "w", newline="") as csvfile:
-            fieldnames = all_results[0].keys()
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(all_results)
-    print("¡Listo!")
+    if loss_rate == 0:
+        print("¡Resultado Perfecto! El agente Q-Learning es invencible.")
+    else:
+        print("El agente aún tiene debilidades frente a Minimax.")
 
 
 if __name__ == "__main__":
-    main()
+    run_benchmark(50)

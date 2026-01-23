@@ -69,7 +69,7 @@ class GameController:
 
     def _setup_q_agent(self):
         agent = QLearningAgent(epsilon=0)
-        model_path = "models/q_table.pkl"
+        model_path = "src/models/q_table.pkl"
 
         if os.path.exists(model_path):
             print("Cargando modelo Q-Learning existente...")
