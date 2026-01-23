@@ -25,8 +25,6 @@ class Renderer:
         self.hud_view = HUDComponent(self.font)
 
         self.inverted_symbols = False
-        self.board_offset_x = self.board_view.rect.x
-        self.board_offset_y = self.board_view.rect.y
 
     def set_inverted(self, inverted: bool):
         """Define si el jugador 1 es X u O."""
@@ -80,7 +78,6 @@ class Renderer:
             self.graph_view.draw(self.screen, ai_tree, self.inverted_symbols)
 
         current_player_idx = board.turn - 1
-        from src.main import PlayerType  # Import local para evitar círculos
 
         player_label = "HUMAN" if player_types[current_player_idx] == PlayerType.HUMAN else "IA"
 
@@ -89,3 +86,7 @@ class Renderer:
         if board.game_over:
             self.hud_view.draw_win_line(self.screen, self.board_view, board)
             self.hud_view.draw_game_over(self.screen, self.screen.get_rect(), board)
+
+    def draw_step_prompt(self):
+        """Interfaz para el mensaje de espera de la IA."""
+        self.hud_view.draw_step_prompt(self.screen)

@@ -1,6 +1,6 @@
 import pygame
 
-from src.config import CIRCLE_COLOR, CROSS_COLOR, FONT_COLOR, LINE_WIDTH, WIN_LINE_COLOR
+from src.config import BG_COLOR, CIRCLE_COLOR, CROSS_COLOR, FONT_COLOR, HEIGHT, LINE_WIDTH, WIDTH, WIN_LINE_COLOR
 
 
 class HUDComponent:
@@ -78,3 +78,17 @@ class HUDComponent:
         res_surf = self.font.render("Pulsa 'R' para reiniciar", True, (200, 200, 200))
         res_rect = res_surf.get_rect(center=(screen_rect.centerx, screen_rect.centery + 40))
         surface.blit(res_surf, res_rect)
+
+    def draw_step_prompt(self, surface):
+        """Dibuja el aviso de espera entre turnos de IA."""
+        font_prompt = pygame.font.Font(None, 30)
+        text_str = "Presione ENTER para siguiente jugada..."
+
+        prompt = font_prompt.render(text_str, True, CIRCLE_COLOR)
+        screen_rect = surface.get_rect()
+        rect = prompt.get_rect(center=(screen_rect.width // 3.25, screen_rect.height - 25))
+
+        bg_rect = rect.inflate(20, 10)
+        pygame.draw.rect(surface, BG_COLOR, bg_rect)
+
+        surface.blit(prompt, rect)

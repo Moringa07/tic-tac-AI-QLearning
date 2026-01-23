@@ -19,12 +19,6 @@ class GameState(Enum):
     PLAYING = 2
 
 
-class PlayerType:
-    HUMAN = "HUMAN"
-    AI_SLOW = "AI_SLOW"
-    AI_FAST = "AI_FAST"
-
-
 class GameController:
     def __init__(self):
         pygame.display.init()
@@ -242,7 +236,7 @@ class GameController:
             self._draw_ghost_symbol()
 
         if self.waiting_for_step:
-            self._draw_step_prompt()
+            self.renderer.draw_step_prompt()
 
     def _draw_ghost_symbol(self):
         mouse_pos = pygame.mouse.get_pos()
@@ -252,14 +246,6 @@ class GameController:
             row, col = move
             if self.board.is_valid_move(row, col):
                 self.renderer.draw_ghost_symbol(row, col, self.board.turn)
-
-    def _draw_step_prompt(self):
-        font = pygame.font.Font(None, 30)
-        prompt = font.render("Presione ENTER para siguiente jugada...", True, CIRCLE_COLOR)
-        rect = prompt.get_rect(center=(WIDTH // 3.25, HEIGHT - 25))
-        bg = rect.inflate(20, 10)
-        pygame.draw.rect(self.screen, BG_COLOR, bg)
-        self.screen.blit(prompt, rect)
 
     def start_game(self, players):
         self.player_types = players

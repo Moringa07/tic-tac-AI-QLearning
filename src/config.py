@@ -33,3 +33,9 @@ TEXT_COLOR = (255, 255, 255)
 POSITIVE_COLOR = (0, 255, 0)
 NEGATIVE_COLOR = (255, 0, 0)
 NEUTRAL_COLOR = (200, 200, 200)
+
+
+class PlayerType:
+    HUMAN = "HUMAN"
+    AI_SLOW = "AI_SLOW"
+    AI_FAST = "AI_FAST"
