@@ -14,7 +14,7 @@ help:
 	@printf "  \033[36m%-18s\033[0m %s\n" "start" "Inicia el contenedor si está detenido."
 	@printf "  \033[36m%-18s\033[0m %s\n" "stop" "Detiene y elimina el contenedor."
 	@printf "  \033[36m%-18s\033[0m %s\n" "run" "Jugar: Ejecuta la interfaz gráfica (src/main.py)."
-	@printf "  \033[36m%-18s\033[0m %s\n" "simulate" "Estadísticas: Ejecuta las simulaciones (src/simulate.py)."
+	@printf "  \033[36m%-18s\033[0m %s\n" "benchmark" "Estadísticas: Ejecuta las simulaciones (src/benchmark.py)."
 	@printf "  \033[36m%-18s\033[0m %s\n" "notebook" "Análisis: Lanza Jupyter Lab en el navegador."
 	@echo ""
 	@echo "💎 Calidad de Código (Ruff):"
@@ -52,9 +52,9 @@ run: ## Ejecuta el script principal
 	@echo "-> Ejecutando el juego..."
 	@podman exec -it $(CONTAINER_NAME) uv run src/main.py
 
-simulate: ## Ejecuta una simulación de N partidas para recolectar datos
+benchmark: ## Ejecuta una simulación de N partidas para recolectar datos
 	@echo "-> Iniciando la simulación estadística (esto puede tardar)..."
-	@podman exec -it $(CONTAINER_NAME) uv run src/simulate.py
+	@podman exec -it $(CONTAINER_NAME) uv run src/benchmark.py
 
 notebook: ## Lanza un servidor de Jupyter Lab para el análisis de datos
 	@echo "-> Lanzando servidor de Jupyter Lab..."
