@@ -4,7 +4,6 @@ from enum import Enum
 
 import pygame
 
-from src.ai.gym import train
 from src.ai.minimax import (
     find_best_move_and_viz,
 )
@@ -12,6 +11,7 @@ from src.ai.ql_agent import QLearningAgent
 from src.config import *
 from src.game_logic.board import Board
 from src.gui.renderer import Renderer
+from src.training.gym import train_with_decay
 
 
 # --- Enums y Constantes ---
@@ -76,7 +76,8 @@ class GameController:
             agent.load_model(model_path)
         else:
             print("Entrenando nuevo agente Q-Learning (espera unos segundos)...")
-            agent = train(episodes=50000)
+
+            agent = train_with_decay(QLearningAgent(), episodes=50000)
             agent.save_model(model_path)
             agent.epsilon = 0
         return agent

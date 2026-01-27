@@ -1,7 +1,6 @@
 import math
 import pickle
 
-from src.ai.minimax import minimax_alpha_beta
 from src.game_logic.board import Board
 
 
@@ -33,7 +32,6 @@ def precompute_all_states():
             prev_state = (board.turn, board.winner, board.game_over, board.win_info)
             board.make_move(move[0], move[1])
 
-            # Recursión simple
             score = solve(board)
 
             board.undo_move(move[0], move[1], *prev_state)
@@ -47,7 +45,6 @@ def precompute_all_states():
                     best_score = score
                     best_move = move
 
-        # Guardamos tanto el score como el mejor movimiento para este estado
         lookup_table[state_hash] = {"move": best_move, "score": best_score}
         return best_score
 
