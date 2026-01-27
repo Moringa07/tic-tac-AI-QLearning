@@ -7,7 +7,12 @@ from src.game_logic.board import Board
 
 
 def train_with_decay(
-    agent, episodes=20000, minimax_ratio=0.2, pickle_path="tictactoe_lookup.pkl", epsilon_decay_gen=None
+    agent,
+    episodes=20000,
+    minimax_ratio=0.2,
+    pickle_path="tictactoe_lookup.pkl",
+    epsilon_decay_gen=None,
+    reward_draw_gen=0.5,
 ):
     """
     Entrena un agente QLearning usando la tabla precomputada como oponente maestro
@@ -29,6 +34,8 @@ def train_with_decay(
         decay_factor = 1.0 / episodes
     else:
         decay_factor = epsilon_decay_gen
+
+    REWARD_DRAW = reward_draw_gen
 
     for episode in range(episodes):
         board.reset()
@@ -85,7 +92,7 @@ def train_with_decay(
                     for p in [1, 2]:
                         if history[p] and not (p == 2 and is_playing_master):
                             s, a = history[p]
-                            agent.learn(s, a, 0.5, None, [], True)
+                            agent.learn(s, a, REWARD_DRAW, None, [], True)
             else:
                 other_player = 2 if current_player == 1 else 1
                 if history[other_player] and not (other_player == 2 and is_playing_master):

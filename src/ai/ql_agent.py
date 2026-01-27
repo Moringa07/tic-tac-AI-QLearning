@@ -74,8 +74,9 @@ class GeneticQLAgent:
             self.alpha = round(random.uniform(0.01, 0.99), 2)
             self.gamma = round(random.uniform(0.01, 0.99), 2)
             self.epsilon_decay_rate = round(random.uniform(0.0001, 0.01), 4)
+            self.reward_draw = round(random.uniform(0.0, 1.0), 2)
         else:
-            self.alpha, self.gamma, self.epsilon_decay_rate = gen
+            self.alpha, self.gamma, self.epsilon_decay_rate, self.reward_draw = gen
 
     def instantiate_agent(self):
         self.agent = QLearningAgent(alpha=self.alpha, gamma=self.gamma, epsilon=1.0)
