@@ -8,7 +8,7 @@ from src.ai.gym import train
 from src.ai.minimax import (
     find_best_move_and_viz,
 )
-from src.ai.qlearning import QLearningAgent
+from src.ai.ql_agent import QLearningAgent
 from src.config import *
 from src.game_logic.board import Board
 from src.gui.renderer import Renderer

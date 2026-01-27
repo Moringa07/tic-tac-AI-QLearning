@@ -2,9 +2,9 @@ import random
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-from src.ai.genetic_ql_agent import GeneticQLAgent
-from src.ai.gym import train_with_decay
+from src.ai.ql_agent import GeneticQLAgent
 from src.benchmarks.utils import evaluate_vs_minimax
+from src.training.gym import train_with_decay
 
 POPULATION_SIZE = 30
 GENERATIONS = 10

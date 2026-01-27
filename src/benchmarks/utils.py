@@ -2,7 +2,7 @@ import os
 import pickle
 
 from src.ai.minimax import find_best_move_alpha_beta
-from src.ai.qlearning import QLearningAgent
+from src.ai.ql_agent import QLearningAgent
 from src.game_logic.board import Board
 
 
