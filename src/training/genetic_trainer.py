@@ -1,3 +1,5 @@
+import csv
+import os
 import random
 import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -12,6 +14,12 @@ TOUR_SIZE = 5
 MAX_WORKERS = 6
 NUM_GAMES = 50
 NUM_EPISODES = 5000
+
+MUTATION_START_RATE = 0.30
+MUTATION_END_RATE = 0.05
+
+CSV_FILE = "queries/resultados_torneo_final.csv"
+FIELDNAMES = ["Run", "Max_Fitness", "Alpha", "Gamma", "Epsilon_Decay", "R_Draw", "Episodes_to_Optimal"]
 
 
 def initialize_population():
@@ -91,7 +99,7 @@ def selection(population):
     return best
 
 
-def crossover(parent1, parent2):
+def crossover(parent1, parent2, mutation_rate=0.1):
     p1 = [parent1.alpha, parent1.gamma, parent1.epsilon_decay_rate, parent1.reward_draw]
     p2 = [parent2.alpha, parent2.gamma, parent2.epsilon_decay_rate, parent2.reward_draw]
 
@@ -101,7 +109,7 @@ def crossover(parent1, parent2):
 
     # Mutación
     for i in range(len(child_gen)):
-        if random.random() < 0.1:
+        if random.random() < mutation_rate:
             if i < 3:
                 child_gen[i] = round(random.uniform(0.01, 0.99), 2)
             else:
@@ -110,7 +118,11 @@ def crossover(parent1, parent2):
     return GeneticQLAgent(0, gen=child_gen)
 
 
+GLOBAL_RUN_COUNTER = 1
+
+
 def run_genetic_algorithm():
+    global GLOBAL_RUN_COUNTER
     population = initialize_population()
     best_overall = None
 
@@ -131,10 +143,17 @@ def run_genetic_algorithm():
 
         new_population.extend(population[:NUM_ELITES])
 
+        current_mutation_rate = max(
+            MUTATION_END_RATE,
+            MUTATION_START_RATE - (MUTATION_START_RATE - MUTATION_END_RATE) * (generation / GENERATIONS),
+        )
+
         while len(new_population) < POPULATION_SIZE:
-            parent1 = selection(population)
+            parent1 = selection(
+                population,
+            )
             parent2 = selection(population)
-            child = crossover(parent1, parent2)
+            child = crossover(parent1, parent2, current_mutation_rate)
             new_population.append(child)
 
         population = new_population
@@ -151,10 +170,39 @@ def run_genetic_algorithm():
         f"R_draw={best_overall.reward_draw:.2f}"
     )
 
+    results = {
+        "Run": GLOBAL_RUN_COUNTER,
+        "Max_Fitness": best_overall.fitness,
+        "Alpha": best_overall.alpha,
+        "Gamma": best_overall.gamma,
+        "Epsilon_Decay": best_overall.epsilon_decay_rate,
+        "R_Draw": best_overall.reward_draw,
+        "Episodes_to_Optimal": getattr(best_overall, "episodes_to_optimal", "N/A"),
+    }
+
+    append_to_csv(results)
+
+    GLOBAL_RUN_COUNTER += 1
+
+
+def append_to_csv(data):
+    """Añade una fila al archivo CSV, creando la cabecera si no existe."""
+    file_exists = os.path.isfile(CSV_FILE)
+    with open(CSV_FILE, mode="a", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=FIELDNAMES)
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow(data)
+
 
 if __name__ == "__main__":
     inicio = time.time()
-    for _ in range(5):
+    NUM_TOTAL_RUNS = 50
+    for i in range(1, NUM_TOTAL_RUNS + 1):
+        print(f"\n======== INICIANDO EJECUCIÓN {i}/{NUM_TOTAL_RUNS} ========")
         run_genetic_algorithm()
+    print("\nFIN DE LAS EJECUCIONES. Resultados guardados en resultados_torneo_final.csv")
     fin = time.time()
     print(fin - inicio)
