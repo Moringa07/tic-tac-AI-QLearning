@@ -1,3 +1,4 @@
+import copy
 import csv
 import os
 import random
@@ -17,6 +18,22 @@ NUM_EPISODES = 5000
 
 MUTATION_START_RATE = 0.30
 MUTATION_END_RATE = 0.05
+
+CSV_FILE_GENERATION_DATA = "generations_data.csv"
+CSV_FIELDNAMES = ["Generation", "Max_Fitness", "Avg_Fitness", "Optimal_HPs"]
+# ----------------------------------------------------
+
+
+def append_generation_data(data):
+    """Añade una fila al archivo CSV de generación."""
+    file_exists = os.path.isfile(CSV_FILE_GENERATION_DATA)
+    with open(CSV_FILE_GENERATION_DATA, mode="a", newline="") as file:
+        writer = csv.DictWriter(file, fieldnames=CSV_FIELDNAMES)
+
+        if not file_exists:
+            writer.writeheader()
+
+        writer.writerow(data)
 
 
 def initialize_population():
@@ -118,22 +135,48 @@ def crossover(parent1, parent2, mutation_rate=0.1):
 def run_genetic_algorithm():
     population = initialize_population()
     best_overall = None
+    # all_generation_fitness = [] # No se usa
 
-    for generation in range(GENERATIONS):  # GENERATIONS es el total
-        # print(f"\n--- GENERACIÓN {generation + 1}/{GENERATIONS} ---")
+    if os.path.exists(CSV_FILE_GENERATION_DATA):
+        os.remove(CSV_FILE_GENERATION_DATA)
 
+    for generation in range(GENERATIONS):
         evaluate_population(population, generation + 1, GENERATIONS)
 
         population.sort(key=lambda x: x.fitness, reverse=True)
 
         current_best = population[0]
-        if best_overall is None or current_best.fitness > best_overall.fitness:
-            best_overall = current_best
+
+        # 1. CÁLCULO DE MÉTRICAS DE LA GENERACIÓN
+        current_generation_fitnesses = [p.fitness for p in population]
+        avg_fitness = sum(current_generation_fitnesses) / POPULATION_SIZE
+        max_fitness = current_best.fitness
+
+        # 2. GUARDAR DATOS DE LA GENERACIÓN
+        generation_data = {
+            "Generation": generation + 1,
+            "Max_Fitness": max_fitness,
+            "Avg_Fitness": avg_fitness,
+            "Optimal_HPs": f"α={current_best.alpha}, γ={current_best.gamma}, R_draw={current_best.reward_draw}",
+        }
+        append_generation_data(generation_data)
+
+        # 3. ACTUALIZAR EL MEJOR GLOBAL (Guardando los HPs y la Eficiencia)
+        # Acceder a 'fitness' con corchetes
+        if best_overall is None or current_best.fitness > best_overall["fitness"]:
+            best_overall = {
+                "fitness": current_best.fitness,
+                "alpha": current_best.alpha,
+                "gamma": current_best.gamma,
+                "epsilon_decay_rate": current_best.epsilon_decay_rate,
+                "reward_draw": current_best.reward_draw,
+                # ESTO ES CRUCIAL: GUARDAR EL VALOR ENCONTRADO EN LA EVALUACIÓN
+                "episodes_to_optimal": getattr(current_best, "episodes_to_optimal", NUM_EPISODES),
+            }
 
         new_population = []
 
         NUM_ELITES = 3
-
         new_population.extend(population[:NUM_ELITES])
 
         current_mutation_rate = max(
@@ -142,9 +185,7 @@ def run_genetic_algorithm():
         )
 
         while len(new_population) < POPULATION_SIZE:
-            parent1 = selection(
-                population,
-            )
+            parent1 = selection(population)
             parent2 = selection(population)
             child = crossover(parent1, parent2, current_mutation_rate)
             new_population.append(child)
@@ -153,14 +194,18 @@ def run_genetic_algorithm():
         for i, agent in enumerate(population):
             agent.id = i
 
+    episodes_to_optimal = best_overall.get("episodes_to_optimal", NUM_EPISODES)
+
     print("\n--- RESULTADO FINAL ---")
-    print(f"Mejor Agente Global: Fitness={best_overall.fitness:.3f}")
+    print(f"Mejor Agente Global: Fitness={best_overall['fitness']:.3f}")
+    efficiency_percent = (NUM_EPISODES - episodes_to_optimal) / NUM_EPISODES * 100
+    print(f"Eficiencia de Convergencia: {episodes_to_optimal}/{NUM_EPISODES} episodios ({efficiency_percent:.1f}%)")
 
     print(
-        f"Hyperparámetros Óptimos: α={best_overall.alpha:.2f}, "
-        f"γ={best_overall.gamma:.2f}, "
-        f"decay={best_overall.epsilon_decay_rate}, "
-        f"R_draw={best_overall.reward_draw:.2f}"
+        f"Hyperparámetros Óptimos: α={best_overall['alpha']:.2f}, "
+        f"γ={best_overall['gamma']:.2f}, "
+        f"decay={best_overall['epsilon_decay_rate']:.4f}, "
+        f"R_draw={best_overall['reward_draw']:.2f}"
     )
 
 
