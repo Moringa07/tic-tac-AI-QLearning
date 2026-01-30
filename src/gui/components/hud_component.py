@@ -15,8 +15,8 @@ class HUDComponent:
         text_str = f"Turno de {'Humano' if player_type == 'HUMAN' else 'IA'} ({symbol})"
         txt_surf = self.font.render(text_str, True, color)
 
-        # Posicionar arriba del tablero
-        pos = (board_rect.centerx, board_rect.top // 2)
+        # Posicionar arriba del tablero (más cerca)
+        pos = (board_rect.centerx, board_rect.top - 50)
         surface.blit(txt_surf, txt_surf.get_rect(center=pos))
 
     def draw_win_line(self, surface, board_view, board_logic):

@@ -13,6 +13,8 @@ def train_with_decay(
     pickle_path="tictactoe_lookup.pkl",
     epsilon_decay_gen=None,
     reward_draw_gen=0.5,
+    start_epsilon=1.0,
+    progress_callback=None,
 ):
     """
     Entrena un agente QLearning usando la tabla precomputada como oponente maestro
@@ -26,18 +28,21 @@ def train_with_decay(
         # print("Tabla cargada. Iniciando entrenamiento acelerado...")
 
     board = Board()
-    agent.epsilon = 1.0
+    agent.epsilon = start_epsilon
     episodes_to_optimal = episodes
     optimal_threshold = 50 * 0.98
 
     if epsilon_decay_gen is None:
-        decay_factor = 1.0 / episodes
+        decay_factor = start_epsilon / episodes
     else:
         decay_factor = epsilon_decay_gen
 
     REWARD_DRAW = reward_draw_gen
 
     for episode in range(episodes):
+        if progress_callback:
+            progress_callback(episode, episodes)
+
         board.reset()
 
         is_playing_master = random.random() < minimax_ratio
